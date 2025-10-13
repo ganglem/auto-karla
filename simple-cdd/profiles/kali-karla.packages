@@ -1,0 +1,4 @@
+# Auto install these packages in the Kali Karla profile
+screen
+htop
+binwalk
