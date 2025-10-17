@@ -15,7 +15,13 @@ These images offer customization during setup. For being able to live boot into 
 
 - - -
 
-## Help
+# Help
+
+## How to build:
+
+```console
+./build.sh --verbose --variant karla
+```
 
 ### What each files (probably) does
 
@@ -42,55 +48,6 @@ Usage: ./build.sh [<option>...]
   --no-clean
   --clean
   --help
-$
-```
-
-## Install
-
-On a Kali machine:
-
-```console
-$ sudo apt update
-$ sudo apt install -y git simple-cdd debian-cd
-$
-$ git clone https://gitlab.com/kalilinux/build-scripts/kali-installer.git
-$ cd kali-installer/
-```
-
-## Usage Examples
-
-Build the default image, using the latest packages:
-
-```console
-$ ./build.sh
-[...]
-```
-
-- - -
-
-Manually define which Kali mirror to pull from, as well as be more detailed in output:
-
-```console
-$ echo "http://kali.download/kali" > .mirror
-$
-$ ./build.sh --verbose
-[...]
-```
-
-- - -
-
-Build a different installer image version (one which has every tool, or a network install):
-
-```console
-$ ./build.sh \
-  --debug \
-  --variant everything
-[...]
-$
-$ ./build.sh \
-  --debug \
-  --variant netinst
-[...]
 $
 ```
 
