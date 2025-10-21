@@ -11,3 +11,4 @@ images
 .mirror
 build.log
 
+.idea/
