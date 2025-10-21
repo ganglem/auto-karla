@@ -1,13 +1,5 @@
 #!/bin/sh
 
-# Log file for tracking installation
-LOGFILE="$(pwd)/kali-karla-install.log"
-
-# Function to log messages
-log() {
-    echo "$@" | tee -a "$LOGFILE"
-}
-
 # The reference version of this script is maintained in:
 #   kali-installer/simple-cdd/profiles/kali.postinst
 #   kali-live/kali-config/common/includes.installer/kali-finish-install
@@ -21,11 +13,11 @@ log() {
 
 configure_sources_list() {
     if grep -q '^deb ' /etc/apt/sources.list; then
-        log "INFO: sources.list is configured, everything is fine"
+        echo "INFO: sources.list is configured, everything is fine"
         return
     fi
 
-    log "INFO: sources.list is empty, setting up a default one for Kali"
+    echo "INFO: sources.list is empty, setting up a default one for Kali"
 
     cat >/etc/apt/sources.list <<END
 # See https://www.kali.org/docs/general-use/kali-linux-sources-list-repositories/
@@ -39,11 +31,11 @@ END
 
 create_karla_user() {
     if getent passwd karla >/dev/null; then
-        log "INFO: user 'karla' already exists"
+        echo "INFO: user 'karla' already exists"
         return
     fi
 
-    log "INFO: creating default user 'karla'"
+    echo "INFO: creating default user 'karla'"
 
     # TODO: Replace this password hash with your custom hash
     # This is a placeholder hash for password "kali" - CHANGE THIS!
@@ -54,43 +46,91 @@ create_karla_user() {
 
     # Add karla to sudo group for administrative privileges
     usermod -a -G sudo karla
-    log "INFO: user 'karla' added to sudo group"
+    echo "INFO: user 'karla' added to sudo group"
 
-    log "INFO: user 'karla' created successfully"
+    echo "INFO: user 'karla' created successfully"
 }
 
 create_pentest_folder() {
     if [ ! -d /home/karla ]; then
-        log "WARNING: /home/karla does not exist, skipping PENTEST folder creation"
+        echo "WARNING: /home/karla does not exist, skipping PENTEST folder creation"
         return
     fi
 
-    log "INFO: creating PENTEST folder in karla's home directory"
+    echo "INFO: creating PENTEST folder in karla's home directory"
     mkdir -p /home/karla/PENTEST
-
 
     chown -R karla:karla /home/karla/PENTEST
     chmod -R 755 /home/karla/PENTEST
 
-    # Try multiple possible locations for the custom files
-    for KARLA_FILES in "/cdrom/simple-cdd" "/simple-cdd" "/media/cdrom/simple-cdd"; do
-        if [ -d "$KARLA_FILES" ]; then
-            log "INFO: found custom files at $KARLA_FILES, copying to PENTEST folder"
-            cp -v "$KARLA_FILES"/* /home/karla/PENTEST/ 2>&1 | tee -a "$LOGFILE"
-            chown -R karla:karla /home/karla/PENTEST
-            break
-        else
-            log "WARNING: $KARLA_FILES not found, trying next location"
+    echo "INFO: PENTEST folder created successfully"
+}
+
+setup_pentest_folder() {
+    if [ ! -d /home/karla/PENTEST ]; then
+        echo "WARNING: /home/karla/PENTEST does not exist, skipping file setup"
+        return
+    fi
+
+    echo "INFO: setting up PENTEST folder with files"
+
+    # Get the directory where this script is located
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    echo "INFO: script is running from: $SCRIPT_DIR"
+
+    # List contents for debugging
+    echo "INFO: contents of script directory:"
+    ls -la "$SCRIPT_DIR"
+
+    # Copy JAR files from the same directory as this script
+    JAR_COUNT=0
+    for jarfile in "$SCRIPT_DIR"/*.jar; do
+        if [ -f "$jarfile" ]; then
+            echo "INFO: copying $(basename "$jarfile") to PENTEST folder"
+            cp -v "$jarfile" /home/karla/PENTEST/
+            JAR_COUNT=$((JAR_COUNT + 1))
         fi
     done
 
-    log "INFO: PENTEST folder setup completed"
+    if [ $JAR_COUNT -gt 0 ]; then
+        echo "INFO: successfully copied $JAR_COUNT JAR file(s)"
+        chown -R karla:karla /home/karla/PENTEST
+        chmod 644 /home/karla/PENTEST/*.jar 2>/dev/null || true
+    else
+        echo "WARNING: no JAR files found in $SCRIPT_DIR"
+
+        # Fallback: try the typical CD mount locations
+        for CDROM_PATH in "/cdrom" "/media/cdrom" "/media/cdrom0" "/run/live/medium"; do
+            KARLA_FILES="$CDROM_PATH/simple-cdd"
+            if [ -d "$KARLA_FILES" ]; then
+                echo "INFO: trying fallback location at $KARLA_FILES"
+                for jarfile in "$KARLA_FILES"/*.jar; do
+                    if [ -f "$jarfile" ]; then
+                        echo "INFO: copying $(basename "$jarfile") from fallback location"
+                        cp -v "$jarfile" /home/karla/PENTEST/
+                        JAR_COUNT=$((JAR_COUNT + 1))
+                    fi
+                done
+                [ $JAR_COUNT -gt 0 ] && break
+            fi
+        done
+
+        if [ $JAR_COUNT -gt 0 ]; then
+            echo "INFO: successfully copied $JAR_COUNT JAR file(s) from fallback location"
+            chown -R karla:karla /home/karla/PENTEST
+            chmod 644 /home/karla/PENTEST/*.jar 2>/dev/null || true
+        else
+            echo "WARNING: Could not find JAR files in any location"
+        fi
+    fi
+
+    echo "INFO: PENTEST folder setup complete"
 }
 
 get_user_list() {
     for user in $(cd /home && ls); do
         if ! getent passwd "$user" >/dev/null; then
-            log "WARNING: user '$user' is invalid but /home/$user exists" >&2
+            echo "WARNING: user '$user' is invalid but /home/$user exists" >&2
             continue
         fi
         echo "$user"
@@ -100,15 +140,15 @@ get_user_list() {
 
 configure_zsh() {
     if grep -q 'nozsh' /proc/cmdline; then
-        log "INFO: user opted out of zsh by default"
+        echo "INFO: user opted out of zsh by default"
         return
     fi
     if [ ! -x /usr/bin/zsh ]; then
-        log "INFO: /usr/bin/zsh is not available"
+        echo "INFO: /usr/bin/zsh is not available"
         return
     fi
     for user in $(get_user_list); do
-        log "INFO: changing default shell of user '$user' to zsh"
+        echo "INFO: changing default shell of user '$user' to zsh"
         chsh --shell /usr/bin/zsh $user
     done
 }
@@ -126,7 +166,7 @@ configure_usergroups() {
     kali_groups="adm dialout kaboxer vboxsf wireshark"
 
     for user in $(get_user_list | grep -xv root); do
-        log "INFO: adding user '$user' to groups '$kali_groups'"
+        echo "INFO: adding user '$user' to groups '$kali_groups'"
         for grp in $kali_groups; do
             getent group $grp >/dev/null || continue
             usermod -a -G $grp $user
@@ -141,7 +181,7 @@ pkg_installed() {
 configure_terminal() {
     while read -r desktop terminal; do
         pkg_installed kali-desktop-$desktop || continue
-        log "INFO: setting x-terminal-emulator alternative to '$terminal'"
+        echo "INFO: setting x-terminal-emulator alternative to '$terminal'"
         update-alternatives --verbose --set x-terminal-emulator /usr/bin/$terminal || true
         break
     done <<END
@@ -155,17 +195,18 @@ xfce  qterminal
 END
 }
 
-log "========================================"
-log "Kali-Karla postinst script started at $(date)"
-log "========================================"
+echo "========================================"
+echo "Kali-Karla postinst script started at $(date)"
+echo "========================================"
 
 create_karla_user
 create_pentest_folder
+setup_pentest_folder
 configure_sources_list
 configure_zsh
 configure_usergroups
 configure_terminal
 
-log "========================================"
-log "Kali-Karla postinst script completed at $(date)"
-log "========================================"
+echo "========================================"
+echo "Kali-Karla postinst script completed at $(date)"
+echo "========================================"
