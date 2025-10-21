@@ -1,0 +1,84 @@
+#
+# Kali-Karla automated installation preseed configuration
+#
+
+### Localization
+# Preseeding language, country and locale
+d-i debian-installer/locale string de_DE.UTF-8
+d-i debian-installer/language string de
+d-i debian-installer/country string DE
+
+# Keyboard selection
+d-i keyboard-configuration/xkb-keymap select de
+d-i keyboard-configuration/variant select German
+
+### Network configuration
+# Hostname
+d-i netcfg/get_hostname string kali-karla
+d-i netcfg/get_hostname seen false
+
+# If non-free firmware is needed for the network or other hardware, you can
+# configure the installer to always try to load it, without prompting
+d-i hw-detect/load_firmware boolean true
+
+# Domain name - leave blank to skip
+d-i netcfg/get_domain string
+d-i netcfg/get_domain seen true
+
+# Disable that annoying WEP key dialog
+d-i netcfg/wireless_wep string
+
+### Account setup
+# Skip root password (we disable root login)
+d-i passwd/root-login boolean false
+
+# Skip creation of a normal user account (we create 'karla' in postinst)
+d-i passwd/make-user boolean false
+
+# If you do want to create a user, these would be used:
+# d-i passwd/user-fullname string Karla
+# d-i passwd/username string karla
+# d-i passwd/user-password-crypted password [encrypted-password-here]
+
+### Clock and time zone setup
+d-i clock-setup/utc boolean true
+d-i time/zone string Europe/Berlin
+d-i clock-setup/ntp boolean true
+
+### Partitioning
+# Use the whole disk with LVM
+d-i partman-auto/method string lvm
+d-i partman-auto-lvm/guided_size string max
+d-i partman-lvm/device_remove_lvm boolean true
+d-i partman-md/device_remove_md boolean true
+d-i partman-lvm/confirm boolean true
+d-i partman-lvm/confirm_nooverwrite boolean true
+
+# Partitioning scheme - use regular scheme (not separate /home or encrypted)
+d-i partman-auto/choose_recipe select atomic
+
+# This makes partman automatically partition without confirmation
+d-i partman-partitioning/confirm_write_new_label boolean true
+d-i partman/choose_partition select finish
+d-i partman/confirm boolean true
+d-i partman/confirm_nooverwrite boolean true
+
+### Package selection
+tasksel tasksel/first multiselect standard
+
+# Individual additional packages to install
+# (kali-linux-default or other metapackages should be in kali-karla.packages)
+d-i pkgsel/include string openssh-server
+
+### Boot loader installation
+d-i grub-installer/only_debian boolean true
+d-i grub-installer/with_other_os boolean true
+d-i grub-installer/bootdev string default
+
+### Finishing up the installation
+# Avoid that last message about the install being complete
+d-i finish-install/reboot_in_progress note
+
+# This will prevent the installer from ejecting the CD
+# d-i cdrom-detect/eject boolean false
+
